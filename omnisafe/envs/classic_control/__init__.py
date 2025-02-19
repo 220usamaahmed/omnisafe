@@ -14,3 +14,4 @@
 # ==============================================================================
 """Environment implementations from papers."""
 from omnisafe.envs.classic_control import envs_from_crabs
+from omnisafe.envs.classic_control import envs_from_gym

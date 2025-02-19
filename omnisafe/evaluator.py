@@ -298,6 +298,7 @@ class Evaluator:  # pylint: disable=too-many-instance-attributes
                 hidden_sizes=pi_cfg['hidden_sizes'],
                 activation=pi_cfg['activation'],
                 weight_initialization_mode=weight_initialization_mode,
+                kwargs=self._cfgs['model_cfgs']['actor']['actor_cfgs'],
             )
             self._actor = actor_builder.build_actor(actor_type)
             self._actor.load_state_dict(model_params['pi'])

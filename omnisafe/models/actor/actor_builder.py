@@ -16,11 +16,14 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from omnisafe.models.actor.gaussian_learning_actor import GaussianLearningActor
 from omnisafe.models.actor.gaussian_sac_actor import GaussianSACActor
 from omnisafe.models.actor.mlp_actor import MLPActor
 from omnisafe.models.actor.perturbation_actor import PerturbationActor
 from omnisafe.models.actor.vae_actor import VAE
+from omnisafe.models.actor.discretizer_mlp_actor import DiscretizerMLPActor
 from omnisafe.models.base import Actor
 from omnisafe.typing import Activation, ActorType, InitFunction, OmnisafeSpace
 
@@ -45,6 +48,7 @@ class ActorBuilder:
         hidden_sizes: list[int],
         activation: Activation = 'relu',
         weight_initialization_mode: InitFunction = 'kaiming_uniform',
+        kwargs: dict[str, Any] = {},
     ) -> None:
         """Initialize an instance of :class:`ActorBuilder`."""
         self._obs_space: OmnisafeSpace = obs_space
@@ -113,6 +117,15 @@ class ActorBuilder:
                 self._hidden_sizes,
                 activation=self._activation,
                 weight_initialization_mode=self._weight_initialization_mode,
+            )
+        if actor_type == 'discretizer_mlp':
+            return DiscretizerMLPActor(
+                self._obs_space,
+                self._act_space,
+                self._hidden_sizes,
+                activation=self._activation,
+                weight_initialization_mode=self._weight_initialization_mode,
+                discrete_actions=kwargs['discrete_actions'],
             )
         raise NotImplementedError(
             f'Actor type {actor_type} is not implemented! '
