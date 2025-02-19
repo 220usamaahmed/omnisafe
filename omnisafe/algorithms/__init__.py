@@ -35,6 +35,7 @@ from omnisafe.algorithms.off_policy import (
     DDPGLag,
     SACLag,
     TD3Lag,
+    DQN,
 )
 
 # Offline Safe
