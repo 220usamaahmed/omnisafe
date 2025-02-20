@@ -78,7 +78,7 @@ defaults:
     # Configuration of Actor network
     actor:
       # Size of hidden layers
-      hidden_sizes: [256, 256]
+      hidden_sizes: [128, 128]
       # Activation function
       activation: relu
       # The learning rate of Actor network

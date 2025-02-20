@@ -42,7 +42,7 @@ class DQN(BaseAlgo):
         self.discrete_actions = 11
         self.batch_size = 64
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.num_episodes = 100
+        self.num_episodes = 50
         self.epsilon = 1.0
         self.epsilon_decay = 0.995
         self.epsilon_min = 0.01
@@ -69,7 +69,7 @@ class DQN(BaseAlgo):
     def _init(self) -> None:
         print("_init called")
 
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.q_network.net.parameters(), lr=1e-3)
         self.memory = deque(maxlen=10000)
 
     def _init_log(self) -> None:
@@ -123,7 +123,7 @@ class DQN(BaseAlgo):
             return random.randint(0, self.discrete_actions - 1)
         else:
             with torch.no_grad():
-                q_values = self.q_network.feed_forward(obs)
+                q_values = self.q_network.net(obs)
             return torch.argmax(q_values).item()
 
     def _train(self):
@@ -139,8 +139,8 @@ class DQN(BaseAlgo):
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
-        q_values = self.q_network.feed_forward(states).gather(1, actions)
-        next_q_values = self.target_network.feed_forward(next_states).max(1, keepdims=True)[0]
+        q_values = self.q_network.net(states).gather(1, actions)
+        next_q_values = self.target_network.net(next_states).max(1, keepdims=True)[0]
         target_q_values = rewards + 0.99 * next_q_values * (1 - dones)
 
         loss = nn.MSELoss()(q_values, target_q_values.detach())

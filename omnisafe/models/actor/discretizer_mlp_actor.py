@@ -18,7 +18,7 @@ class DiscretizerMLPActor(Actor):
         act_space: OmnisafeSpace,
         hidden_sizes: list[int],
         activation: Activation = 'relu',
-        output_activation: Activation = 'tanh',
+        output_activation: Activation = 'identity',
         weight_initialization_mode: InitFunction = 'kaiming_uniform',
         discrete_actions: int = 11,
     ) -> None:
@@ -38,18 +38,17 @@ class DiscretizerMLPActor(Actor):
             weight_initialization_mode=weight_initialization_mode,
         )
 
+        print(self.net)
+
     def predict(self, obs: torch.Tensor, deterministic: bool = True) -> torch.Tensor:
-        model_output = self.net(obs)
+        with torch.no_grad():
+            model_output = self.net(obs)
         action_idx = torch.argmax(model_output).item()
 
         # TODO: Get limits from action space
         action = np.linspace(-2, 2, self._discrete_actions)[action_idx]
 
         return torch.tensor(action)
-
-    def feed_forward(self, obs: torch.Tensor) -> torch.Tensor:
-        model_output = self.net(obs)
-        return model_output
 
     def _distribution(self, obs: torch.Tensor) -> Distribution:
         raise NotImplementedError
