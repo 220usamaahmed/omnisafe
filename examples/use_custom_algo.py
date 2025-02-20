@@ -38,10 +38,12 @@ def evaluate(log_dir: str):
                 height=256,
             )
             evaluator.render(num_episodes=1)
-            evaluator.evaluate(num_episodes=1)
+            # evaluator.evaluate(num_episodes=1)
     scan_dir.close()
 
 
 if __name__ == "__main__":
     # train()
-    evaluate("./runs/DQN-{Pendulum-v1}/seed-000-2025-02-20-09-10-32")
+    evaluate(
+        "/Users/usama/HRL/my-omnisafe/examples/runs/DQN-{Pendulum-v1}/seed-000-2025-02-20-09-56-11"
+    )
