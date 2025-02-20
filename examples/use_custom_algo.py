@@ -4,22 +4,8 @@ import omnisafe
 
 def train():
     env_id = "Pendulum-v1"
-    custom_cfgs = {
-        "train_cfgs": {
-            "total_steps": 10000,
-            "vector_env_nums": 1,
-            "parallel": 1,
-        },
-        "algo_cfgs": {
-            "steps_per_epoch": 1000,
-            "update_iters": 1,
-        },
-        "logger_cfgs": {
-            "use_wandb": False,
-        },
-    }
+    custom_cfgs = {}
 
-    # agent = omnisafe.Agent("DDPG", env_id, custom_cfgs=custom_cfgs)
     agent = omnisafe.Agent("DQN", env_id, custom_cfgs=custom_cfgs)
     agent.learn()
 
@@ -37,13 +23,21 @@ def evaluate(log_dir: str):
                 width=256,
                 height=256,
             )
-            evaluator.render(num_episodes=1)
-            # evaluator.evaluate(num_episodes=1)
+            # evaluator.render(num_episodes=1)
+            evaluator.evaluate(num_episodes=1)
     scan_dir.close()
 
 
+def get_last_run() -> str:
+    base_path = "./runs/DQN-{Pendulum-v1}"
+    subfolders = [f for f in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, f))]
+    return os.path.join(base_path, max(subfolders))
+
+
 if __name__ == "__main__":
-    # train()
-    evaluate(
-        "/Users/usama/HRL/my-omnisafe/examples/runs/DQN-{Pendulum-v1}/seed-000-2025-02-20-09-56-11"
-    )
+    # Run this first
+    train()
+
+    # Get latest run logs or provide path manually
+    log_dir = get_last_run()
+    evaluate(log_dir)

@@ -11,48 +11,22 @@ defaults:
     vector_env_nums: 1
     # number of parallel agent, similar to a3c
     parallel: 1
-    # total number of steps to train
-    total_steps: 1000000
-    # number of evaluate episodes
-    eval_episodes: 1
+    # total number of episodes
+    total_episodes: 100
   # algorithm configurations
   algo_cfgs:
-    # number of steps to update the policy
-    steps_per_epoch: 2000
-    # number of steps per sample
-    update_cycle: 1
-    # number of iterations to update the policy
-    update_iters: 1
-    # The size of replay buffer
-    size: 1000000
+    # The size of replay buffer (memory)
+    size: 10000
     # The size of batch
-    batch_size: 256
-    # normalize reward
-    reward_normalize: False
-    # normalize cost
-    cost_normalize: False
+    batch_size: 64
     # normalize observation
     obs_normalize: False
-    # max gradient norm
-    max_grad_norm: 40
-    # use critic norm
-    use_critic_norm: False
-    # critic norm coefficient
-    critic_norm_coeff: 0.001
-    # The soft update coefficient
-    polyak: 0.005
+    # Epsilon for exploration
+    epsilon: 1.0
+    epsilon_decay: 0.995
+    epsilon_min: 0.01
     # The discount factor of GAE
     gamma: 0.99
-    # Actor perdorm random action before `start_learning_steps` steps
-    start_learning_steps: 25000
-    # The delay step of policy update
-    policy_delay: 1
-    # Whether to use the exploration noise
-    use_exploration_noise: True
-    # The exploration noise
-    exploration_noise: 0.1
-    # use cost
-    use_cost: False
   # logger configurations
   logger_cfgs:
     # use wandb for logging
@@ -82,7 +56,7 @@ defaults:
       # Activation function
       activation: relu
       # The learning rate of Actor network
-      lr: 0.0003
+      lr: 0.001
       # Additional Actor configuration
       actor_cfgs:
         # Number of bins for discretization contineous output

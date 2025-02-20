@@ -38,8 +38,6 @@ class DiscretizerMLPActor(Actor):
             weight_initialization_mode=weight_initialization_mode,
         )
 
-        print(self.net)
-
     def predict(self, obs: torch.Tensor, deterministic: bool = True) -> torch.Tensor:
         with torch.no_grad():
             model_output = self.net(obs)

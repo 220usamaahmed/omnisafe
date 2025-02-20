@@ -22,44 +22,50 @@ from omnisafe.models.actor.discretizer_mlp_actor import DiscretizerMLPActor
 
 @registry.register
 class DQN(BaseAlgo):
+
     def _init_env(self) -> None:
-        print("_init_env called")
-
-        env_cfgs = {}
-
+        self.env_cfgs = {}
         if hasattr(self._cfgs, 'env_cfgs') and self._cfgs.env_cfgs is not None:
-            env_cfgs = self._cfgs.env_cfgs.todict()
+            self.env_cfgs = self._cfgs.env_cfgs.todict()
+
+        self.train_cfgs = self._cfgs.train_cfgs
+        self.algo_cfgs = self._cfgs.algo_cfgs
+        self.model_cfgs = self._cfgs.model_cfgs
 
         self._env: CMDP = make(
             self._env_id,
-            num_envs=self._cfgs.train_cfgs.vector_env_nums,
-            device=self._cfgs.train_cfgs.device,
-            **env_cfgs,
+            num_envs=self.train_cfgs.vector_env_nums,
+            device=self.train_cfgs.device,
+            **self.env_cfgs,
         )
 
         self._env.set_seed(self._cfgs.seed)
 
-        self.discrete_actions = 11
-        self.batch_size = 64
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.num_episodes = 50
-        self.epsilon = 1.0
-        self.epsilon_decay = 0.995
-        self.epsilon_min = 0.01
+        self.discrete_actions = self.model_cfgs.actor.actor_cfgs.discrete_actions
+        self.batch_size = self.algo_cfgs.batch_size
+        self.device = self.train_cfgs.device
+        self.num_episodes = self.train_cfgs.total_episodes
+        self.epsilon = self.algo_cfgs.epsilon
+        self.epsilon_decay = self.algo_cfgs.epsilon_decay
+        self.epsilon_min = self.algo_cfgs.epsilon_min
+        self.gamma = self.algo_cfgs.gamma
+        self.lr = self.model_cfgs.actor.lr
 
     def _init_model(self) -> None:
-        print("_init_model called")
-
         self.q_network = DiscretizerMLPActor(
             obs_space=self._env.observation_space,
             act_space=self._env.action_space,
             hidden_sizes=self._cfgs.model_cfgs.actor.hidden_sizes,
+            weight_initialization_mode=self.model_cfgs.weight_initialization_mode,
+            activation=self.model_cfgs.actor.activation,
             discrete_actions=self.discrete_actions,
         )
         self.target_network = DiscretizerMLPActor(
             obs_space=self._env.observation_space,
             act_space=self._env.action_space,
             hidden_sizes=self._cfgs.model_cfgs.actor.hidden_sizes,
+            weight_initialization_mode=self.model_cfgs.weight_initialization_mode,
+            activation=self.model_cfgs.actor.activation,
             discrete_actions=self.discrete_actions,
         )
 
@@ -67,14 +73,10 @@ class DQN(BaseAlgo):
         self.target_network.net.eval()
 
     def _init(self) -> None:
-        print("_init called")
-
         self.optimizer = optim.Adam(self.q_network.net.parameters(), lr=1e-3)
         self.memory = deque(maxlen=10000)
 
     def _init_log(self) -> None:
-        print("_init_log called")
-
         self._logger: Logger = Logger(
             output_dir=self._cfgs.logger_cfgs.log_dir,
             exp_name=self._cfgs.exp_name,
@@ -91,8 +93,6 @@ class DQN(BaseAlgo):
         self._logger.torch_save()
 
     def learn(self) -> tuple[float, float, float]:
-        print("learn called")
-
         for episode in range(self.num_episodes):
             state, _ = self._env.reset()
             total_reward = 0
@@ -102,7 +102,7 @@ class DQN(BaseAlgo):
                 action_idx = self._select_action(state, epsilon=self.epsilon)
                 action = torch.tensor([np.linspace(-2, 2, self.discrete_actions)[action_idx]])
 
-                next_state, reward, cost, terminated, truncated, _ = self._env.step(action)
+                next_state, reward, _, terminated, truncated, _ = self._env.step(action)
                 done = terminated or truncated
 
                 self.memory.append((state.numpy(), action_idx, reward, next_state.numpy(), done))
@@ -112,10 +112,13 @@ class DQN(BaseAlgo):
 
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.target_network.net.load_state_dict(self.q_network.net.state_dict())
+
+            # TODO: This and other metrics should be logged using the logger
             print(f"Episode {episode + 1}, Total Reward: {total_reward}")
 
         self._logger.torch_save()
 
+        # TODO: Return the actual ep_ret, ep_cost, ep_len of the last episode
         return 0, 0, 0
 
     def _select_action(self, obs, epsilon):
@@ -141,7 +144,7 @@ class DQN(BaseAlgo):
 
         q_values = self.q_network.net(states).gather(1, actions)
         next_q_values = self.target_network.net(next_states).max(1, keepdims=True)[0]
-        target_q_values = rewards + 0.99 * next_q_values * (1 - dones)
+        target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
         loss = nn.MSELoss()(q_values, target_q_values.detach())
         self.optimizer.zero_grad()

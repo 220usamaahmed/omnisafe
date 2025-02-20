@@ -24,6 +24,7 @@ class Pendulum(CMDP):
         device: torch.device = DEVICE_CPU,
         **kwargs: Any,
     ) -> None:
+        # Removing any other kwargs passed as gymnasium is not happy taking them
         kwargs = {"render_mode": kwargs.get("render_mode", "rgb_array")}
 
         super().__init__(env_id)
