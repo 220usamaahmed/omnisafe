@@ -23,8 +23,8 @@ The algorithm class has to inherit from the `BaseAlgo` class or one of the other
 
 The following methods have to be implemented:
 
-1. `_init_env`: Create an instance of your environment here which will be used during training. Omnisafe provides adapters to wrap your environment. For example, the `OffPolicyAdapter` helps by storing the current observation and allowing us to update the policy before proceeding with the episode. I've haven't used any such adapter to keep things as simple as possible.
-2. `_init_model`: Create the deep learning models required for your algorithm. These need to be of type `Actor`. For this example I created the `DiscretizerMLPActor` which is a simple wrapper around a MLP but instead of the output layer matching the size of the action space we have multiple bins per action component. This is because Q-Learning works with discrete actions but we want our algorithm to work on contineous `Box` action spaces. Omnisafe has other model typical models which can be used.
+1. `_init_env`: Create an instance of your environment here which will be used during training. Omnisafe provides adapters to wrap your environment. For example, the `OffPolicyAdapter` helps by storing the current observation and allowing us to update the policy before proceeding with the episode. I haven't used any such adapter to keep things as simple as possible.
+2. `_init_model`: Create the deep learning models required for your algorithm. These need to be of type `Actor`. For this example I created the `DiscretizerMLPActor` which is a simple wrapper around an MLP but instead of the output layer matching the size of the action space we have multiple bins per action component. This is because Q-Learning works with discrete actions but we want our algorithm to work on contineous `Box` action spaces. Omnisafe has other model typical models which can be used.
 3. `_init`: Initialize the training of your algorithm. Here we initialize our optimizer and a queue to hold the rollback of our environment.
 4. `_init_log`: Initialize the logger. This will log different metrics during training. I have ignored this for now. The logger also stores your model weights after training.
 5. `learn`: This has the main training loop of your algorithm. Omnisafe provides abstractions for writing the training loop. For example there is a `.rollout` method for collecting episodes. I have choosen to not use any such method to keep things as simple as possible.
@@ -37,7 +37,7 @@ The model class has to inherit from the `Actor` class or one of the other subcla
 
 The important function that needs to be implemented here is the `predict` method. This will take the observation tensor and output the action tensor. 
 
-During evaluation Omnisafe will create an object of this class and load the model weights. Any PyTorch module (Conv layers, Linear layers etc.) are stored and loaded automatically.
+During evaluation Omnisafe will create an object of this class and load the model weights. Any PyTorch module (Conv layers, Linear layers etc.) are stored and loaded automatically by the evaluator.
 
 The `forward` and `log_prob` also need to be implemented but they can simply raise `NotImplementedError`.
 
