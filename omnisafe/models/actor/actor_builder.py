@@ -56,6 +56,7 @@ class ActorBuilder:
         self._weight_initialization_mode: InitFunction = weight_initialization_mode
         self._activation: Activation = activation
         self._hidden_sizes: list[int] = hidden_sizes
+        self._kwargs = kwargs
 
     # pylint: disable-next=too-many-return-statements
     def build_actor(
@@ -125,7 +126,7 @@ class ActorBuilder:
                 self._hidden_sizes,
                 activation=self._activation,
                 weight_initialization_mode=self._weight_initialization_mode,
-                discrete_actions=kwargs['discrete_actions'],
+                discrete_actions=self._kwargs['discrete_actions'],
             )
         raise NotImplementedError(
             f'Actor type {actor_type} is not implemented! '

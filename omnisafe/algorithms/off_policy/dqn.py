@@ -42,7 +42,7 @@ class DQN(BaseAlgo):
         self.discrete_actions = 11
         self.batch_size = 64
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.num_episodes = 50
+        self.num_episodes = 100
         self.epsilon = 1.0
         self.epsilon_decay = 0.995
         self.epsilon_min = 0.01
@@ -75,6 +75,21 @@ class DQN(BaseAlgo):
     def _init_log(self) -> None:
         print("_init_log called")
 
+        self._logger: Logger = Logger(
+            output_dir=self._cfgs.logger_cfgs.log_dir,
+            exp_name=self._cfgs.exp_name,
+            seed=self._cfgs.seed,
+            use_tensorboard=self._cfgs.logger_cfgs.use_tensorboard,
+            use_wandb=self._cfgs.logger_cfgs.use_wandb,
+            config=self._cfgs,
+        )
+
+        what_to_save: dict[str, Any] = {}
+        what_to_save['pi'] = self.q_network
+
+        self._logger.setup_torch_saver(what_to_save)
+        self._logger.torch_save()
+
     def learn(self) -> tuple[float, float, float]:
         print("learn called")
 
@@ -98,6 +113,8 @@ class DQN(BaseAlgo):
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.target_network.net.load_state_dict(self.q_network.net.state_dict())
             print(f"Episode {episode + 1}, Total Reward: {total_reward}")
+
+        self._logger.torch_save()
 
         return 0, 0, 0
 

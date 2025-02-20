@@ -43,7 +43,5 @@ def evaluate(log_dir: str):
 
 
 if __name__ == "__main__":
-    train()
-    # evaluate(
-    #     "/Users/usama/HRL/exploring-omnisafe/runs/DDPG-{Pendulum-v1}/seed-000-2025-02-19-14-47-23"
-    # )
+    # train()
+    evaluate("./runs/DQN-{Pendulum-v1}/seed-000-2025-02-20-09-10-32")
