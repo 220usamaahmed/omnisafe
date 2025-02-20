@@ -3,7 +3,7 @@ import omnisafe
 
 
 def train():
-    env_id = "SafetyPointGoal1-v0"
+    env_id = "Pendulum-v1"
     custom_cfgs = {
         "train_cfgs": {
             "total_steps": 10000,
@@ -21,7 +21,7 @@ def train():
 
     # agent = omnisafe.Agent("DDPG", env_id, custom_cfgs=custom_cfgs)
     agent = omnisafe.Agent("DQN", env_id, custom_cfgs=custom_cfgs)
-    # agent.learn()
+    agent.learn()
 
 
 def evaluate(log_dir: str):

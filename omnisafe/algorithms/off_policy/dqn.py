@@ -23,8 +23,7 @@ from omnisafe.models.actor.discretizer_mlp_actor import DiscretizerMLPActor
 @registry.register
 class DQN(BaseAlgo):
     def _init_env(self) -> None:
-        print(self._env_id)
-        print(self._cfgs)
+        print("_init_env called")
 
         env_cfgs = {}
 
@@ -49,6 +48,8 @@ class DQN(BaseAlgo):
         self.epsilon_min = 0.01
 
     def _init_model(self) -> None:
+        print("_init_model called")
+
         self.q_network = DiscretizerMLPActor(
             obs_space=self._env.observation_space,
             act_space=self._env.action_space,
@@ -66,24 +67,30 @@ class DQN(BaseAlgo):
         self.target_network.net.eval()
 
     def _init(self) -> None:
+        print("_init called")
+
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=1e-3)
         self.memory = deque(maxlen=10000)
 
-    def _init_log(self) -> None: ...
+    def _init_log(self) -> None:
+        print("_init_log called")
 
     def learn(self) -> tuple[float, float, float]:
+        print("learn called")
+
         for episode in range(self.num_episodes):
-            obs, _ = self._env.reset()
+            state, _ = self._env.reset()
             total_reward = 0
             done = False
 
             while not done:
-                action_idx = self._select_action(obs, epsilon=self.epsilon)
-                action = np.linspace(-2, 2, self.discrete_actions)[action_idx]
-                next_state, reward, cost, terminated, truncated, _ = self._env.step([action])
+                action_idx = self._select_action(state, epsilon=self.epsilon)
+                action = torch.tensor([np.linspace(-2, 2, self.discrete_actions)[action_idx]])
+
+                next_state, reward, cost, terminated, truncated, _ = self._env.step(action)
                 done = terminated or truncated
 
-                self.memory.append((obs, action_idx, reward, next_state, done))
+                self.memory.append((state.numpy(), action_idx, reward, next_state.numpy(), done))
                 self._train()
                 state = next_state
                 total_reward += reward
@@ -91,6 +98,8 @@ class DQN(BaseAlgo):
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.target_network.net.load_state_dict(self.q_network.net.state_dict())
             print(f"Episode {episode + 1}, Total Reward: {total_reward}")
+
+        return 0, 0, 0
 
     def _select_action(self, obs, epsilon):
         if random.random() < epsilon:
@@ -113,8 +122,8 @@ class DQN(BaseAlgo):
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
-        q_values = self.q_network.net.feed_forward(states).gather(1, actions)
-        next_q_values = self.target_network.net.feed_forward(next_states).max(1, keepdims=True)[0]
+        q_values = self.q_network.feed_forward(states).gather(1, actions)
+        next_q_values = self.target_network.feed_forward(next_states).max(1, keepdims=True)[0]
         target_q_values = rewards + 0.99 * next_q_values * (1 - dones)
 
         loss = nn.MSELoss()(q_values, target_q_values.detach())
