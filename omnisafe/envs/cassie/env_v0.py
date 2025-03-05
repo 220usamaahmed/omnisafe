@@ -550,31 +550,3 @@ class Cassie(CMDP):
         cost /= self.num_legs
         costs.append(cost)
         return np.array(costs)
-
-
-if __name__ == "__main__":
-    env = Env(use_fixed_base=False)
-
-    for i in range(1):
-        env.reset()
-        start_t = time.time()
-        global_t = 0.0
-        elapsed_t = 0.0
-        action = np.ones(env.action_space.shape[0])
-
-        # frames = []
-
-        for i in range(100):
-            action = env.action_space.sample()
-            state, reward, terminate, truncate, info = env.step(action)
-            img = env.render("human")
-            # frames.append(img)
-
-            global_t += env.env_dt
-
-            elapsed_t = time.time() - start_t
-            if elapsed_t < global_t:
-                time.sleep(global_t - elapsed_t)
-
-            if terminate or truncate:
-                break
