@@ -269,7 +269,17 @@ class Cassie(CMDP):
         raw_state = self._getRawState()
         return self._convertState(raw_state)
 
-    def step(self, action):
+    def step(
+        self,
+        action: torch.Tensor,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        dict[str, Any],
+    ]:
         self.cur_step += 1
         if self.is_terminated:
             state = deepcopy(self.terminal_state)
@@ -282,9 +292,14 @@ class Cassie(CMDP):
                 self.terminal_state = deepcopy(state)
                 self.terminal_reward = deepcopy(reward)
                 self.terminal_info = deepcopy(info)
-        terminate = False if not self.is_earlystop else self.is_terminated
-        truncate = self.cur_step >= self.max_episode_length
-        return state, reward, terminate, truncate, info
+        terminated = False if not self.is_earlystop else self.is_terminated
+        truncated = self.cur_step >= self.max_episode_length
+        cost = np.zeros_like(reward)
+        state, reward, cost, terminated, truncated = (
+            torch.as_tensor(x, dtype=torch.float32, device=self._device)
+            for x in (state, reward, cost, terminated, truncated)
+        )
+        return state, reward, cost, terminated, truncated, info
 
     def render(self, mode="human", size=(512, 512), **kwargs):
         if mode == "rgb_array":
