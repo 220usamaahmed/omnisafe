@@ -17,6 +17,7 @@ from omnisafe.envs.cassie.generator import FootTrajectoryGenerator
 from omnisafe.envs.core import CMDP, env_register
 from omnisafe.typing import DEVICE_CPU
 from scipy.spatial.transform import Rotation
+import torch
 
 ABS_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,9 +31,12 @@ class Cassie(CMDP):
     def __init__(
         self,
         env_id: str,
+        device: torch.device = DEVICE_CPU,
         **kwargs: Any,
     ) -> None:
         super().__init__(env_id)
+
+        self._device = device
 
         # =========== for simulation parameter =========== #
         self.sim_dt = 0.002
@@ -172,7 +176,11 @@ class Cassie(CMDP):
     def max_episode_steps(self) -> int | None:
         return self.max_episode_length
 
-    def reset(self, *, seed=None, options=None):
+    def reset(
+        self,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, dict[str, Any]]:
         super().reset(seed=seed)
 
         # reset sim & generator
@@ -249,7 +257,11 @@ class Cassie(CMDP):
 
         # get state
         raw_state = self._getRawState()
-        return self._convertState(raw_state), {}
+        converted_state = self._convertState(raw_state)
+        return (
+            torch.as_tensor(converted_state, dtype=torch.float32, device=self._device),
+            {},
+        )
 
     def setCommandVel(self, lin_vel, ang_vel):
         self.cmd_lin_vel = np.array([lin_vel, 0.0, 0.0])
@@ -294,10 +306,6 @@ class Cassie(CMDP):
             self.viewer.close()
             self.viewer = None
         return
-
-    #################
-    # private methods
-    #################
 
     def _loadModel(self, use_fixed_base=False):
         # load xml file
