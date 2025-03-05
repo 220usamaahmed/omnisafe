@@ -104,4 +104,11 @@ class Pendulum(CMDP):
                 device=self._device,
             )
 
+        print("state", obs)
+        print("reward", reward)
+        print("cost", cost)
+        print("terminate", terminated)
+        print("truncated", truncated)
+        print("info", info)
+        exit()
         return obs, reward, cost, terminated, truncated, info

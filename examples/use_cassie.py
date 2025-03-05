@@ -6,7 +6,7 @@ def train():
     env_id = "Cassie-v0"
     custom_cfgs = {}
 
-    agent = omnisafe.Agent("DQN", env_id, custom_cfgs=custom_cfgs)
+    agent = omnisafe.Agent("PPO", env_id, custom_cfgs=custom_cfgs)
     agent.learn()
 
 
@@ -16,15 +16,15 @@ def evaluate(log_dir: str):
     for item in scan_dir:
         if item.is_file() and item.name.split(".")[-1] == "pt":
             evaluator.load_saved(
-                render_mode="human",
+                render_mode="rgb_array",
                 save_dir=log_dir,
                 model_name=item.name,
                 camera_name="track",
                 width=256,
                 height=256,
             )
-            # evaluator.render(num_episodes=1)
-            evaluator.evaluate(num_episodes=1)
+            evaluator.render(num_episodes=1)
+            # evaluator.evaluate(num_episodes=1)
     scan_dir.close()
 
 
@@ -36,8 +36,9 @@ def get_last_run() -> str:
 
 if __name__ == "__main__":
     # Run this first
-    train()
+    # train()
 
     # Get latest run logs or provide path manually
     log_dir = get_last_run()
+    # log_dir = "./runs/PPO-{Cassie-v0}/seed-000-2025-03-05-11-50-34"
     evaluate(log_dir)

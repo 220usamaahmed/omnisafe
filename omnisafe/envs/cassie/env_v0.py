@@ -22,8 +22,9 @@ import torch
 ABS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
+@env_register
 class Cassie(CMDP):
-    _suppor_envs = ClassVar[list[str]] = ["Cassie-v0"]
+    _support_envs: ClassVar[list[str]] = ["Cassie-v0"]
 
     need_auto_reset_wrapper = True
     need_time_limit_wrapper = True
@@ -36,6 +37,7 @@ class Cassie(CMDP):
     ) -> None:
         super().__init__(env_id)
 
+        self._num_envs = 1
         self._device = device
 
         # =========== for simulation parameter =========== #
@@ -176,6 +178,9 @@ class Cassie(CMDP):
     def max_episode_steps(self) -> int | None:
         return self.max_episode_length
 
+    def set_seed(self, seed: int) -> None:
+        self.reset(seed=seed)
+
     def reset(
         self,
         seed: int | None = None,
@@ -284,37 +289,42 @@ class Cassie(CMDP):
         if self.is_terminated:
             state = deepcopy(self.terminal_state)
             reward = deepcopy(self.terminal_reward)
+            cost = deepcopy(self.terminal_cost)
             info = deepcopy(self.terminal_info)
         else:
-            state, reward, terminate, truncate, info = self._step(action)
+            state, reward, cost, terminate, truncate, info = self._step(action)
             if terminate:
                 self.is_terminated = True
                 self.terminal_state = deepcopy(state)
                 self.terminal_reward = deepcopy(reward)
+                self.terminal_cost = deepcopy(cost)
                 self.terminal_info = deepcopy(info)
-        terminated = False if not self.is_earlystop else self.is_terminated
-        truncated = self.cur_step >= self.max_episode_length
-        cost = np.zeros_like(reward)
-        state, reward, cost, terminated, truncated = (
-            torch.as_tensor(x, dtype=torch.float32, device=self._device)
-            for x in (state, reward, cost, terminated, truncated)
-        )
-        return state, reward, cost, terminated, truncated, info
+        terminate = False if not self.is_earlystop else self.is_terminated
+        truncate = self.cur_step >= self.max_episode_length
 
-    def render(self, mode="human", size=(512, 512), **kwargs):
+        state, reward, cost, terminate, truncate = (
+            torch.as_tensor(x, dtype=torch.float32, device=self._device)
+            for x in (state, reward, cost, terminate, truncate)
+        )
+
+        # print("state", state)
+        # print("reward", reward)
+        # print("cost", cost)
+        # print("terminate", terminate)
+        # print("truncated", truncate)
+        # print("info", info)
+        # exit()
+
+        return state, reward, cost, terminate, truncate, info
+
+    def render(self, mode="rgb_array", size=(512, 512), **kwargs):
         if mode == "rgb_array":
             renderer = mujoco.Renderer(self.model)
             renderer.update_scene(self.data)
 
             return renderer.render()
         else:
-            if self.viewer is None:
-                self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
-                self.viewer.cam.azimuth = 45
-                self.viewer.cam.distance = 5.0
-                self.viewer.cam.elevation = -20
-            mujoco.mj_step(self.model, self.data)
-            self.viewer.sync()
+            raise NotImplementedError()
 
     def close(self):
         if self.viewer is not None:
@@ -370,6 +380,8 @@ class Cassie(CMDP):
         return model
 
     def _step(self, action):
+        action = action.numpy()
+
         # ====== before simulation step ====== #
         joint_targets = self.generator.getJointTargets(self.cur_step * self.env_dt)
         joint_targets = np.clip(action + joint_targets, self.lower_limits, self.upper_limits)
@@ -398,9 +410,8 @@ class Cassie(CMDP):
 
         raw_state = self._getRawState()
         state = self._convertState(raw_state)
-        rewards = self._getRewards(raw_state)
-        costs = self._getCosts(raw_state)
-        reward = np.concatenate([rewards, costs])
+        rewards = self._getRewards(raw_state)[0]
+        costs = np.mean(self._getCosts(raw_state))
 
         body_angle = raw_state["gravity_vector"][2] / np.linalg.norm(raw_state["gravity_vector"])
         truncate = self.cur_step >= self.max_episode_length
@@ -408,7 +419,7 @@ class Cassie(CMDP):
 
         info = {}
         # =================================== #
-        return state, reward, terminate, truncate, info
+        return state, rewards, costs, terminate, truncate, info
 
     def _getJointPosList(self):
         joint_pos_list = np.array(
