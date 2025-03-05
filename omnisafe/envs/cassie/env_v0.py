@@ -1,46 +1,57 @@
-from generator import FootTrajectoryGenerator
+from __future__ import annotations
 
+import os
+import time
+from collections import OrderedDict, deque
+from copy import deepcopy
+from typing import Any, ClassVar
+
+import gymnasium as gym
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 import mujoco
 import mujoco.viewer
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-from scipy.spatial.transform import Rotation
-from collections import OrderedDict
-from collections import deque
-from copy import deepcopy
-import gymnasium as gym
 import numpy as np
 import xmltodict
-import time
-import os
+from omnisafe.envs.cassie.generator import FootTrajectoryGenerator
+from omnisafe.envs.core import CMDP, env_register
+from omnisafe.typing import DEVICE_CPU
+from scipy.spatial.transform import Rotation
 
 ABS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
-class Env(gym.Env):
+class Cassie(CMDP):
+    _suppor_envs = ClassVar[list[str]] = ["Cassie-v0"]
+
+    need_auto_reset_wrapper = True
+    need_time_limit_wrapper = True
+
     def __init__(
         self,
-        use_fixed_base=False,
-        init_base_pos=[0.0, 0.0, 1.0],
-        init_base_quat=[1.0, 0.0, 0.0, 0.0],
-        max_episode_length=1000,
-        is_earlystop=False,
-        lin_vel_cmd_range=[-1.0, 1.0],
-        ang_vel_cmd_range=[-0.5, 0.5],
+        env_id: str,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(env_id)
+
         # =========== for simulation parameter =========== #
         self.sim_dt = 0.002
         self.contro_freq = 50.0
         self.n_substeps = int(1 / (self.sim_dt * self.contro_freq))
         self.env_dt = self.sim_dt * self.n_substeps
-        self.use_fixed_base = use_fixed_base
+        self.use_fixed_base = kwargs.get("use_fixed_base", False)
         self.gravity = np.array([0, 0, -9.8])
         self.num_legs = 2
 
         # for init value
-        self.init_base_pos = init_base_pos
-        self.init_base_quat = init_base_quat
+        self.init_base_pos = kwargs.get(
+            "init_base_pos",
+            [0.0, 0.0, 1.0],
+        )
+        self.init_base_quat = kwargs.get(
+            "init_base_quat",
+            [1.0, 0.0, 0.0, 0.0],
+        )
 
         # for Kp & Kd of actuator
         # order: abduct, thigh, knee
@@ -69,12 +80,8 @@ class Env(gym.Env):
         self.viewer = None
 
         # get sim id
-        self.robot_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "cassie_pelvis"
-        )
-        self.geom_floor_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, "floor"
-        )
+        self.robot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "cassie_pelvis")
+        self.geom_floor_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
         self.geom_foot_ids = [
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, f"{name}_foot")
             for name in ["left", "right"]
@@ -101,8 +108,8 @@ class Env(gym.Env):
         ).astype(np.float32)
 
         # environmental variables
-        self.max_episode_length = max_episode_length
-        self.is_earlystop = is_earlystop
+        self.max_episode_length = kwargs.get("max_episode_length", 1000)
+        self.is_earlystop = kwargs.get("is_earlystop", False)
         self.cur_step = 0
         self.num_history = 3
         self.joint_pos_history = deque(maxlen=self.num_history)
@@ -110,8 +117,8 @@ class Env(gym.Env):
         self.joint_target_history = deque(maxlen=self.num_history)
         self.cmd_lin_vel = np.zeros(3)
         self.cmd_ang_vel = np.zeros(3)
-        self.lin_vel_cmd_range = lin_vel_cmd_range
-        self.ang_vel_cmd_range = ang_vel_cmd_range
+        self.lin_vel_cmd_range = kwargs.get("lin_vel_cmd_range", [-1.0, 1.0])
+        self.ang_vel_cmd_range = kwargs.get("ang_vel_cmd_range", [-0.5, 0.5])
         assert self.lin_vel_cmd_range[0] <= self.lin_vel_cmd_range[1]
         assert self.ang_vel_cmd_range[0] <= self.ang_vel_cmd_range[1]
         self.action = np.zeros_like(self.lower_limits)
@@ -140,12 +147,12 @@ class Env(gym.Env):
         self.action_dim = len(self.lower_limits)
         self.reward_dim = len(self._getRewards(raw_state))
         self.cost_dim = len(self._getCosts(raw_state))
-        self.observation_space = gym.spaces.Box(
+        self._observation_space = gym.spaces.Box(
             -np.inf * np.ones(self.state_dim, dtype=np.float32),
             np.inf * np.ones(self.state_dim, dtype=np.float32),
             dtype=np.float32,
         )
-        self.action_space = gym.spaces.Box(
+        self._action_space = gym.spaces.Box(
             -nominal_action_bounds,
             nominal_action_bounds,
             dtype=np.float32,
@@ -161,9 +168,9 @@ class Env(gym.Env):
             dtype=np.float32,
         )
 
-    ################
-    # public methods
-    ################
+    @property
+    def max_episode_steps(self) -> int | None:
+        return self.max_episode_length
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -209,9 +216,7 @@ class Env(gym.Env):
             -1.65963020e00,
         ]
         if not self.use_fixed_base:
-            robot_pos = np.concatenate(
-                [self.init_base_pos, self.init_base_quat], axis=0
-            )
+            robot_pos = np.concatenate([self.init_base_pos, self.init_base_quat], axis=0)
             self.data.qpos[: self.pos_idx_offset] = robot_pos
             self.data.qvel[: self.vel_idx_offset] = 0.0
         self.data.qpos[self.pos_idx_offset :] = init_qpos_list
@@ -239,12 +244,8 @@ class Env(gym.Env):
         # reset variables
         self.cur_step = 0
         self.is_terminated = False
-        self.cmd_lin_vel = np.array(
-            [np.random.uniform(*self.lin_vel_cmd_range)] + [0.0, 0.0]
-        )
-        self.cmd_ang_vel = np.array(
-            [0.0, 0.0] + [np.random.uniform(*self.ang_vel_cmd_range)]
-        )
+        self.cmd_lin_vel = np.array([np.random.uniform(*self.lin_vel_cmd_range)] + [0.0, 0.0])
+        self.cmd_ang_vel = np.array([0.0, 0.0] + [np.random.uniform(*self.ang_vel_cmd_range)])
 
         # get state
         raw_state = self._getRawState()
@@ -348,12 +349,8 @@ class Env(gym.Env):
     def _step(self, action):
         # ====== before simulation step ====== #
         joint_targets = self.generator.getJointTargets(self.cur_step * self.env_dt)
-        joint_targets = np.clip(
-            action + joint_targets, self.lower_limits, self.upper_limits
-        )
-        self.action = self.action * self.action_weight + joint_targets * (
-            1.0 - self.action_weight
-        )
+        joint_targets = np.clip(action + joint_targets, self.lower_limits, self.upper_limits)
+        self.action = self.action * self.action_weight + joint_targets * (1.0 - self.action_weight)
         # ==================================== #
 
         # simulate
@@ -382,9 +379,7 @@ class Env(gym.Env):
         costs = self._getCosts(raw_state)
         reward = np.concatenate([rewards, costs])
 
-        body_angle = raw_state["gravity_vector"][2] / np.linalg.norm(
-            raw_state["gravity_vector"]
-        )
+        body_angle = raw_state["gravity_vector"][2] / np.linalg.norm(raw_state["gravity_vector"])
         truncate = self.cur_step >= self.max_episode_length
         terminate = body_angle >= 0
 
@@ -396,9 +391,7 @@ class Env(gym.Env):
         joint_pos_list = np.array(
             [
                 self.data.qpos[
-                    mujoco.mj_name2id(
-                        self.model, mujoco.mjtObj.mjOBJ_JOINT, "left_hip_roll"
-                    )
+                    mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "left_hip_roll")
                 ]
                 for joint_name in self.joint_names
             ]
@@ -410,9 +403,7 @@ class Env(gym.Env):
         joint_vel_list = np.array(
             [
                 self.data.qvel[
-                    mujoco.mj_name2id(
-                        self.model, mujoco.mjtObj.mjOBJ_JOINT, "left_hip_roll"
-                    )
+                    mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "left_hip_roll")
                 ]
                 for joint_name in self.joint_names
             ]
@@ -506,9 +497,7 @@ class Env(gym.Env):
 
     def _getRewards(self, state):
         ang_vel_error = (self.cmd_ang_vel[2] - state["base_ang_vel"][2]) ** 2
-        lin_vel_error = np.sum(
-            np.square(state["base_lin_vel"][:2] - self.cmd_lin_vel[:2])
-        )
+        lin_vel_error = np.sum(np.square(state["base_lin_vel"][:2] - self.cmd_lin_vel[:2]))
         error = ang_vel_error + lin_vel_error
         power_reward = -1e-3 * self.power_consumption
         reward = 0.1 * (-error + power_reward)
