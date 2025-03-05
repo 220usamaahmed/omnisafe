@@ -578,15 +578,3 @@ if __name__ == "__main__":
 
             if terminate or truncate:
                 break
-
-        # fig, ax = plt.subplots()
-        # im = ax.imshow(frames[0])
-
-        # def update(frame):
-        #     im.set_array(frame)
-        #     return [im]
-
-        # ani = animation.FuncAnimation(
-        #     fig, update, frames=frames, interval=50, blit=True
-        # )
-        # plt.show()
