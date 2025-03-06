@@ -23,7 +23,7 @@ def evaluate(log_dir: str):
                 width=256,
                 height=256,
             )
-            evaluator.render(num_episodes=1)
+            evaluator.render(num_episodes=1, max_render_steps=100)
             # evaluator.evaluate(num_episodes=1)
     scan_dir.close()
 
@@ -39,6 +39,7 @@ if __name__ == "__main__":
     # train()
 
     # Get latest run logs or provide path manually
-    log_dir = get_last_run()
+    # log_dir = get_last_run()
     # log_dir = "./runs/PPO-{Cassie-v0}/seed-000-2025-03-05-11-50-34"
+    log_dir = "./runs/PPO-{Cassie-v0}/seed-000-2025-03-05-11-38-01"
     evaluate(log_dir)
