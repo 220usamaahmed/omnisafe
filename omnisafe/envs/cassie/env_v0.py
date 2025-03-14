@@ -307,14 +307,6 @@ class Cassie(CMDP):
             for x in (state, reward, cost, terminate, truncate)
         )
 
-        # print("state", state)
-        # print("reward", reward)
-        # print("cost", cost)
-        # print("terminate", terminate)
-        # print("truncated", truncate)
-        # print("info", info)
-        # exit()
-
         return state, reward, cost, terminate, truncate, info
 
     def render(self, mode="rgb_array", size=(512, 512), **kwargs):
@@ -381,6 +373,8 @@ class Cassie(CMDP):
 
     def _step(self, action):
         action = action.numpy()
+
+        print(action)
 
         # ====== before simulation step ====== #
         joint_targets = self.generator.getJointTargets(self.cur_step * self.env_dt)

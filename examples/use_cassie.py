@@ -1,6 +1,33 @@
 import os
 import omnisafe
+from omnisafe.envs.core import CMDP, make
+import gymnasium as gym
+import imageio
 
+
+def test():
+    env = make("Cassie-v0", render_mode="rgb_array")
+    frames = []
+
+    observation, info = env.reset(seed=42)
+    for _ in range(500):
+        action = env.action_space.sample()
+        state, reward, cost, terminate, truncate, info = env.step(action)
+
+        # print(state)
+
+        frames.append(env.render())
+
+        if terminate or truncate:
+            observation, info = env.reset()
+
+    env.close()
+
+    # Save frames as a video using ffmpeg
+    # video_path = "output.mp4"
+    # imageio.mimsave(video_path, frames, fps=30, codec="libx264")
+
+    # print(f"Video saved to {video_path}")
 
 def train():
     env_id = "Cassie-v0"
@@ -23,7 +50,7 @@ def evaluate(log_dir: str):
                 width=256,
                 height=256,
             )
-            evaluator.render(num_episodes=1, max_render_steps=100)
+            evaluator.render(num_episodes=1, max_render_steps=300)
             # evaluator.evaluate(num_episodes=1)
     scan_dir.close()
 
@@ -35,11 +62,12 @@ def get_last_run() -> str:
 
 
 if __name__ == "__main__":
+    # test()
+
     # Run this first
     # train()
 
     # Get latest run logs or provide path manually
-    # log_dir = get_last_run()
-    # log_dir = "./runs/PPO-{Cassie-v0}/seed-000-2025-03-05-11-50-34"
-    log_dir = "./runs/PPO-{Cassie-v0}/seed-000-2025-03-05-11-38-01"
+    log_dir = get_last_run()
+    print("Running from", log_dir)
     evaluate(log_dir)
