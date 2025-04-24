@@ -18,15 +18,16 @@ import omnisafe
 
 
 if __name__ == '__main__':
-    env_id = 'SafetyPointGoal1-v0'
+    env_id = 'SafetyAntVelocity-v1'
     custom_cfgs = {
+        'seed': 2,
         'train_cfgs': {
-            'total_steps': 1024000,
+            'total_steps': 1_000_000,
             'vector_env_nums': 1,
             'parallel': 1,
         },
         'algo_cfgs': {
-            'steps_per_epoch': 2048,
+            'steps_per_epoch': 2000,
             'update_iters': 1,
         },
         'logger_cfgs': {
@@ -34,7 +35,8 @@ if __name__ == '__main__':
         },
     }
 
-    agent = omnisafe.Agent('PPOLag', env_id, custom_cfgs=custom_cfgs)
+    agent = omnisafe.Agent('SACPID', env_id, custom_cfgs=custom_cfgs)
+    # agent = omnisafe.Agent('PPOSimmerPID', env_id, custom_cfgs=custom_cfgs)
     agent.learn()
 
     agent.plot(smooth=1)

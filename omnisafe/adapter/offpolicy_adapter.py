@@ -18,7 +18,11 @@ from __future__ import annotations
 
 from typing import Any
 
+# import os
+
 import torch
+
+# from torch.utils.tensorboard import SummaryWriter
 
 from omnisafe.adapter.online_adapter import OnlineAdapter
 from omnisafe.common.buffer import VectorOffPolicyBuffer
@@ -62,6 +66,23 @@ class OffPolicyAdapter(OnlineAdapter):
         self._current_obs, _ = self.reset()
         self._max_ep_len: int = 1000
         self._reset_log()
+
+        # ROOT = "/home/user/siddiquieu1/HRL/experiments"
+
+        # self.writer = SummaryWriter(
+        #     os.path.join(
+        #         ROOT,
+        #         "runs",
+        #         env_id,
+        #         f"_{seed}",
+        #         "sac-pid",
+        #     )
+        # )
+
+        # self.step_count = 0
+        # self.curr_episode_len = 0
+        # self.curr_episode_return = 0
+        # self.cumulative_cost = 0
 
     def eval_policy(  # pylint: disable=too-many-locals
         self,
@@ -131,6 +152,38 @@ class OffPolicyAdapter(OnlineAdapter):
             else:
                 act = agent.step(self._current_obs, deterministic=False)
             next_obs, reward, cost, terminated, truncated, info = self.step(act)
+
+            ##
+
+            # og_cost = info['original_cost']
+
+            # self.step_count += 1
+            # self.curr_episode_len += 1
+            # self.curr_episode_return += reward
+            # self.cumulative_cost += og_cost
+
+            # if self.step_count % 1000 == 0:
+            #     self.writer.add_scalar("Cumulative_Cost", self.cumulative_cost, self.step_count)
+
+            # if terminated or truncated:
+            #     self.writer.add_scalar("Episode_Len", self.curr_episode_len, self.step_count)
+            #     self.writer.add_scalar("Episode_Return", self.curr_episode_return, self.step_count)
+
+            #     print(
+            #         "Episode Length",
+            #         self.curr_episode_len,
+            #         "Steps",
+            #         self.step_count,
+            #         "Episode Return",
+            #         self.curr_episode_return,
+            #         "Cumulative Cost",
+            #         self.cumulative_cost,
+            #     )
+
+            #     self.curr_episode_len = 0
+            #     self.curr_episode_return = 0
+
+            ##
 
             self._log_value(reward=reward, cost=cost, info=info)
             real_next_obs = next_obs.clone()
