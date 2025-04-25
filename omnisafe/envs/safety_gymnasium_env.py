@@ -17,12 +17,10 @@
 from __future__ import annotations
 
 from typing import Any, ClassVar
-import os
 
 import numpy as np
 import safety_gymnasium
 import torch
-from torch.utils.tensorboard import SummaryWriter
 
 from omnisafe.envs.core import CMDP, env_register
 from omnisafe.typing import DEVICE_CPU, Box
@@ -159,23 +157,6 @@ class SafetyGymnasiumEnv(CMDP):
             self._observation_space = self._env.observation_space
         self._metadata = self._env.metadata
 
-        ROOT = "/home/user/siddiquieu1/HRL/experiments"
-
-        self.writer = SummaryWriter(
-            os.path.join(
-                ROOT,
-                "runs",
-                env_id,
-                f"_{2}",
-                "sac-pid",
-            )
-        )
-
-        self.step_count = 0
-        self.curr_episode_len = 0
-        self.curr_episode_return = 0
-        self.cumulative_cost = 0
-
     def step(
         self,
         action: torch.Tensor,
@@ -226,36 +207,6 @@ class SafetyGymnasiumEnv(CMDP):
                 dtype=torch.float32,
                 device=self._device,
             )
-
-        ##
-
-        self.step_count += 1
-        self.curr_episode_len += 1
-        self.curr_episode_return += reward
-        self.cumulative_cost += cost
-
-        if self.step_count % 1000 == 0:
-            self.writer.add_scalar("Cumulative_Cost", self.cumulative_cost, self.step_count)
-
-        if terminated or truncated:
-            self.writer.add_scalar("Episode_Len", self.curr_episode_len, self.step_count)
-            self.writer.add_scalar("Episode_Return", self.curr_episode_return, self.step_count)
-
-            print(
-                "Episode Length",
-                self.curr_episode_len,
-                "Steps",
-                self.step_count,
-                "Episode Return",
-                self.curr_episode_return,
-                "Cumulative Cost",
-                self.cumulative_cost,
-            )
-
-            self.curr_episode_len = 0
-            self.curr_episode_return = 0
-
-        ##
 
         return obs, reward, cost, terminated, truncated, info
 

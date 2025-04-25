@@ -1,0 +1,9 @@
+name: CSTR
+make_args: null
+max_episode_len: 1000
+n_envs: 1
+n_total_steps: 50000
+costs: ['cost1', 'cost2', 'cost3']
+backup_files: [
+    'tasks/cstr.yaml', 
+]

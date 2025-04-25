@@ -1,0 +1,9 @@
+name: Glucose
+make_args: null
+max_episode_len: 1000
+n_envs: 1
+n_total_steps: 50000
+costs: ['cost']
+backup_files: [
+    'tasks/glucose.yaml', 
+]

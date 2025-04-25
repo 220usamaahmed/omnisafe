@@ -18,16 +18,27 @@ import omnisafe
 
 
 if __name__ == '__main__':
-    env_id = 'SafetyAntVelocity-v1'
+    # env_id = 'SafetyAntVelocity-v1'
+    # env_id = 'SafetySwimmerVelocity-v1'
+    # env_id = 'SafetyHumanoidVelocity-v1'
+    # env_id = 'SafetyWalker2dVelocity-v1'
+    # env_id = 'SafetyHalfCheetahVelocity-v1'
+
+    # env_id = 'Glucose'
+    env_id = 'BiGlucose'
+    # env_id = 'CSTR'
+
     custom_cfgs = {
         'seed': 2,
         'train_cfgs': {
-            'total_steps': 1_000_000,
+            # 'total_steps': 1_000_000,
+            'total_steps': 50_000,
             'vector_env_nums': 1,
             'parallel': 1,
         },
         'algo_cfgs': {
-            'steps_per_epoch': 2000,
+            # 'steps_per_epoch': 2000,
+            'steps_per_epoch': 100,
             'update_iters': 1,
         },
         'logger_cfgs': {
@@ -37,6 +48,9 @@ if __name__ == '__main__':
 
     agent = omnisafe.Agent('SACPID', env_id, custom_cfgs=custom_cfgs)
     # agent = omnisafe.Agent('PPOSimmerPID', env_id, custom_cfgs=custom_cfgs)
+
+    # exit()
+
     agent.learn()
 
     agent.plot(smooth=1)
