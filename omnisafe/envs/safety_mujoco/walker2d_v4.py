@@ -2,6 +2,7 @@ import numpy as np
 
 from gym import utils
 from gym.envs.mujoco import MujocoEnv
+
 # from gym.spaces import Box
 from gymnasium.spaces import Box
 
@@ -163,7 +164,7 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
         healthy_angle_range=(-1.0, 1.0),
         reset_noise_scale=5e-3,
         exclude_current_positions_from_observation=True,
-        **kwargs
+        **kwargs,
     ):
         utils.EzPickle.__init__(
             self,
@@ -175,7 +176,7 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
             healthy_angle_range,
             reset_noise_scale,
             exclude_current_positions_from_observation,
-            **kwargs
+            **kwargs,
         )
 
         self._forward_reward_weight = forward_reward_weight
@@ -194,22 +195,17 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
         )
 
         if exclude_current_positions_from_observation:
-            observation_space = Box(
-                low=-np.inf, high=np.inf, shape=(17,), dtype=np.float64
-            )
+            observation_space = Box(low=-np.inf, high=np.inf, shape=(17,), dtype=np.float64)
         else:
-            observation_space = Box(
-                low=-np.inf, high=np.inf, shape=(18,), dtype=np.float64
-            )
+            observation_space = Box(low=-np.inf, high=np.inf, shape=(18,), dtype=np.float64)
 
-        MujocoEnv.__init__(
-            self, "walker2d.xml", 4, observation_space=observation_space, **kwargs
-        )
+        MujocoEnv.__init__(self, "walker2d.xml", 4, observation_space=observation_space, **kwargs)
 
         self.action_space = Box(low=-1, high=1, shape=(6,), dtype=float)
         self.cost_space = Box(
-            -np.inf*np.ones(1, dtype=np.float32), 
-            np.inf*np.ones(1, dtype=np.float32), dtype=np.float32,
+            -np.inf * np.ones(1, dtype=np.float32),
+            np.inf * np.ones(1, dtype=np.float32),
+            dtype=np.float32,
         )
 
         self.episode_step_count = 0
@@ -223,10 +219,7 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
 
     @property
     def healthy_reward(self):
-        return (
-            float(self.is_healthy)
-            * self._healthy_reward
-        )
+        return float(self.is_healthy) * self._healthy_reward
 
     def control_cost(self, action):
         control_cost = np.sqrt(self._ctrl_cost_weight * np.sum(np.square(action)))
@@ -300,7 +293,7 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
         # reward = rewards - costs
 
         # terminated = self.terminated
-        terminated = False # todo
+        terminated = False  # todo
 
         info = {
             "x_position": x_position_after,
@@ -310,12 +303,12 @@ class Walker2dEnv(MujocoEnv, utils.EzPickle):
             "cost": -costs,
         }
 
-        reward = np.array([reward, costs])
+        # reward = np.array([reward, costs])
 
         if self.render_mode == "human":
             self.render()
 
-        return observation, reward, terminated, truncated, info
+        return observation, reward, costs, terminated, truncated, info
 
     def reset_model(self):
         noise_low = -self._reset_noise_scale

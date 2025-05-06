@@ -24,3 +24,4 @@ from omnisafe.envs.safety_gymnasium_env import SafetyGymnasiumEnv
 from omnisafe.envs.safety_gymnasium_modelbased import SafetyGymnasiumModelBased
 from omnisafe.envs.safety_isaac_gym_env import SafetyIsaacGymEnv
 from omnisafe.envs.safety_critical_env import SafetyCriticalEnv
+from omnisafe.envs.mujoco_safety_env import MujocoSafetyEnv

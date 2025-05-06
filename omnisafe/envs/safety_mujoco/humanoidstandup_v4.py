@@ -188,15 +188,9 @@ class HumanoidStandupEnv(MujocoEnv, utils.EzPickle):
     }
 
     def __init__(self, **kwargs):
-        observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(376,), dtype=np.float64
-        )
+        observation_space = Box(low=-np.inf, high=np.inf, shape=(376,), dtype=np.float64)
         MujocoEnv.__init__(
-            self,
-            "humanoidstandup.xml",
-            5,
-            observation_space=observation_space,
-            **kwargs
+            self, "humanoidstandup.xml", 5, observation_space=observation_space, **kwargs
         )
         utils.EzPickle.__init__(self, **kwargs)
 
@@ -247,7 +241,7 @@ class HumanoidStandupEnv(MujocoEnv, utils.EzPickle):
             "reward_quadctrl": -quad_ctrl_cost,
             "reward_impact": -quad_impact_cost,
             "reward1": uph_cost,
-            "reward2": - quad_ctrl_cost,
+            "reward2": -quad_ctrl_cost,
             "reward": uph_cost,
             "cost": -quad_impact_cost - quad_ctrl_cost,
         }
@@ -265,6 +259,7 @@ class HumanoidStandupEnv(MujocoEnv, utils.EzPickle):
         return (
             self._get_obs(),
             reward,
+            quad_impact_cost + quad_ctrl_cost,
             False,
             False,
             info,

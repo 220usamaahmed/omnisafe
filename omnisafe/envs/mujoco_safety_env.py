@@ -7,21 +7,22 @@ import safety_gymnasium
 import torch
 
 from omnisafe.envs.core import CMDP, env_register
+from omnisafe.envs.safety_mujoco.ant_v4 import AntEnv
+from omnisafe.envs.safety_mujoco.reacher_v4 import ReacherEnv
+from omnisafe.envs.safety_mujoco.walker2d_v4 import Walker2dEnv
+from omnisafe.envs.safety_mujoco.humanoidstandup_v4 import HumanoidStandupEnv
 from omnisafe.typing import DEVICE_CPU, Box
-
-from omnisafe.envs.safety_critical.envs_critical import Glucose, BiGlucose, CSTR
 
 
 @env_register
-class SafetyCriticalEnv(CMDP):
-
+class MujocoSafetyEnv(CMDP):
     need_auto_reset_wrapper: bool = False
     need_time_limit_wrapper: bool = False
 
     _support_envs: ClassVar[list[str]] = [
-        'Glucose',
-        'BiGlucose',
-        'CSTR',
+        'MujocoAnt-v4',
+        'MujocoWalker2d-v4',
+        'MujocoHumanoidStandup-v4',
     ]
 
     def __init__(
@@ -31,46 +32,19 @@ class SafetyCriticalEnv(CMDP):
         device: torch.device = DEVICE_CPU,
         **kwargs: Any,
     ) -> None:
+        """Initialize an instance of :class:`SafetyGymnasiumEnv`."""
         super().__init__(env_id)
         self._num_envs = num_envs
         self._device = torch.device(device)
 
         assert num_envs == 1
 
-        if env_id == "Glucose":
-            self._env = Glucose(altered_paras={'n': 0.2, 'p2': 0.005, 'p3': 5e-6})
-        elif env_id == "BiGlucose":
-            self._env = BiGlucose(
-                altered_paras={
-                    "D_G": 80,
-                    "V_G": 0.18,
-                    "k_12": 0.0343,
-                    "F_01": 0.0121,
-                    "EGP_0": 0.0148,
-                    "A_g": 0.8,
-                    "t_maxG": 40,
-                    "t_maxI": 55,
-                    "V_I": 0.12,
-                    "k_e": 0.138,
-                    "k_a1": 0.0031,
-                    "k_a2": 0.0752,
-                    "k_a3": 0.0472,
-                    "k_b1": 9.114e-06,
-                    "k_b2": 6.768e-06,
-                    "k_b3": 0.00189,
-                    "t_maxN": 32.46,
-                    "k_N": 0.62,
-                    "V_N": 16.06,
-                    "p": 0.016,
-                    "S_N": 19600.0,
-                    "M_g": 180.16,
-                    "BW": 68.5,
-                    "N_b": 48.13,
-                    "dt": 10,
-                }
-            )
-        elif env_id == "CSTR":
-            self._env = CSTR(altered_paras={'alpha': 1.05, 'beta': 1.1})
+        if env_id == 'MujocoAnt-v4':
+            self._env = AntEnv()
+        elif env_id == 'MujocoWalker2d-v4':
+            self._env = Walker2dEnv()
+        elif env_id == 'MujocoHumanoidStandup-v4':
+            self._env = HumanoidStandupEnv()
 
         assert isinstance(self._env.action_space, Box), 'Only support Box action space.'
         assert isinstance(
@@ -91,18 +65,33 @@ class SafetyCriticalEnv(CMDP):
         torch.Tensor,
         dict[str, Any],
     ]:
+        """Step the environment.
+
+        .. note::
+            OmniSafe uses auto reset wrapper to reset the environment when the episode is
+            terminated. So the ``obs`` will be the first observation of the next episode. And the
+            true ``final_observation`` in ``info`` will be stored in the ``final_observation`` key
+            of ``info``.
+
+        Args:
+            action (torch.Tensor): Action to take.
+
+        Returns:
+            observation: The agent's observation of the current environment.
+            reward: The amount of reward returned after previous action.
+            cost: The amount of cost returned after previous action.
+            terminated: Whether the episode has ended.
+            truncated: Whether the episode has been truncated due to a time limit.
+            info: Some information logged by the environment.
+        """
         obs, reward, cost, terminated, truncated, info = self._env.step(
             action.detach().cpu().numpy(),
         )
 
-        if truncated:
-            self._env.reset()
-
         obs, reward, cost, terminated, truncated = (
             torch.as_tensor(x, dtype=torch.float32, device=self._device)
-            for x in (obs, reward, cost, False, truncated)
+            for x in (obs, reward, cost, terminated, truncated)
         )
-
         if terminated or truncated:
             info['final_observation'] = np.array(
                 [array if array is not None else np.zeros(obs.shape[-1]) for array in [None]],
@@ -120,13 +109,23 @@ class SafetyCriticalEnv(CMDP):
         seed: int | None = None,
         options: dict[str, Any] | None = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
-        obs, info = self._env.reset(seed=seed)
+        """Reset the environment.
+
+        Args:
+            seed (int, optional): The random seed. Defaults to None.
+            options (dict[str, Any], optional): The options for the environment. Defaults to None.
+
+        Returns:
+            observation: Agent's observation of the current environment.
+            info: Some information logged by the environment.
+        """
+        obs, info = self._env.reset(seed=seed, options=options)
         return torch.as_tensor(obs, dtype=torch.float32, device=self._device), info
 
     @property
     def max_episode_steps(self) -> int:
         """The max steps per episode."""
-        return 100
+        return self._env.spec.max_episode_steps
 
     def set_seed(self, seed: int) -> None:
         """Set the seed for the environment.

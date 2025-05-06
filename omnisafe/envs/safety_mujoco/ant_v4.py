@@ -2,6 +2,7 @@ import numpy as np
 
 from gym import utils
 from gym.envs.mujoco import MujocoEnv
+
 # from gym.spaces import Box
 from gymnasium.spaces import Box
 
@@ -194,7 +195,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         contact_force_range=(-1.0, 1.0),
         reset_noise_scale=0.1,
         exclude_current_positions_from_observation=True,
-        **kwargs
+        **kwargs,
     ):
         utils.EzPickle.__init__(
             self,
@@ -208,7 +209,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
             contact_force_range,
             reset_noise_scale,
             exclude_current_positions_from_observation,
-            **kwargs
+            **kwargs,
         )
 
         self._ctrl_cost_weight = ctrl_cost_weight
@@ -234,18 +235,15 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         if use_contact_forces:
             obs_shape += 84
 
-        observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float64
-        )
+        observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float64)
 
-        MujocoEnv.__init__(
-            self, xml_file, 5, observation_space=observation_space, **kwargs
-        )
+        MujocoEnv.__init__(self, xml_file, 5, observation_space=observation_space, **kwargs)
 
         self.action_space = Box(low=-1, high=1, shape=(8,), dtype=float)
         self.cost_space = Box(
-            -np.inf*np.ones(1, dtype=np.float32), 
-            np.inf*np.ones(1, dtype=np.float32), dtype=np.float32,
+            -np.inf * np.ones(1, dtype=np.float32),
+            np.inf * np.ones(1, dtype=np.float32),
+            dtype=np.float32,
         )
 
         self.episode_step_count = 0
@@ -259,10 +257,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
 
     @property
     def healthy_reward(self):
-        return (
-                float(self.is_healthy)
-                * self._healthy_reward
-        )
+        return float(self.is_healthy) * self._healthy_reward
 
     def control_cost(self, action):
         control_cost = self._ctrl_cost_weight * np.sum(np.square(action))
@@ -277,12 +272,8 @@ class AntEnv(MujocoEnv, utils.EzPickle):
 
     @property
     def contact_cost(self):
-        contact_cost = self._contact_cost_weight * np.sum(
-            np.square(self.contact_forces)
-        )
+        contact_cost = self._contact_cost_weight * np.sum(np.square(self.contact_forces))
         return contact_cost
-
-   
 
     @property
     def is_healthy(self):
@@ -316,7 +307,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         rewards = forward_reward + healthy_reward
 
         costs = ctrl_cost = self.control_cost(action)
-        
+
         terminated = False  # todo
         # terminated = self.terminated
 
@@ -344,9 +335,9 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         if self.render_mode == "human":
             self.render()
 
-        reward = np.array([rewards, costs])
+        # reward = np.array([rewards, costs])
 
-        return observation, reward, terminated, truncated, info
+        return observation, rewards, costs, terminated, truncated, info
 
     def _get_obs(self):
         position = self.data.qpos.flat.copy()
@@ -368,9 +359,8 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         qpos = self.init_qpos + self.np_random.uniform(
             low=noise_low, high=noise_high, size=self.model.nq
         )
-        qvel = (
-            self.init_qvel
-            + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)
+        qvel = self.init_qvel + self._reset_noise_scale * self.np_random.standard_normal(
+            self.model.nv
         )
         self.set_state(qpos, qvel)
 

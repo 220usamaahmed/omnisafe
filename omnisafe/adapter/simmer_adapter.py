@@ -18,8 +18,10 @@ from __future__ import annotations
 
 from typing import Any
 
+import os
 import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from gymnasium.spaces import Box
 
 from omnisafe.adapter.onpolicy_adapter import OnPolicyAdapter
@@ -87,6 +89,23 @@ class SimmerAdapter(SauteAdapter):
             cfgs=cfgs.control_cfgs,
             budget_bound=self._upper_budget.cpu(),
         )
+
+        ROOT = "/home/user/siddiquieu1/HRL/experiments"
+
+        self.writer = SummaryWriter(
+            os.path.join(
+                ROOT,
+                "runs",
+                env_id,
+                f"_{seed}",
+                "simmer",
+            )
+        )
+
+        self.step_count = 0
+        self.curr_episode_len = 0
+        self.curr_episode_return = 0
+        self.cumulative_cost = 0
 
     def reset(
         self,

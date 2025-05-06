@@ -85,6 +85,36 @@ class OnPolicyAdapter(OnlineAdapter):
             act, value_r, value_c, logp = agent.step(obs)
             next_obs, reward, cost, terminated, truncated, info = self.step(act)
 
+            #
+
+            self.step_count += 1
+            self.curr_episode_len += 1
+            self.curr_episode_return += reward
+            self.cumulative_cost += cost
+
+            if self.step_count % 1000 == 0:
+                self.writer.add_scalar("Cumulative_Cost", self.cumulative_cost, self.step_count)
+
+            if terminated or truncated:
+                self.writer.add_scalar("Episode_Len", self.curr_episode_len, self.step_count)
+                self.writer.add_scalar("Episode_Return", self.curr_episode_return, self.step_count)
+
+                print(
+                    "Episode Length",
+                    self.curr_episode_len,
+                    "Steps",
+                    self.step_count,
+                    "Episode Return",
+                    self.curr_episode_return,
+                    "Cumulative Cost",
+                    self.cumulative_cost,
+                )
+
+                self.curr_episode_len = 0
+                self.curr_episode_return = 0
+
+            #
+
             self._log_value(reward=reward, cost=cost, info=info)
 
             if self._cfgs.algo_cfgs.use_cost:
